@@ -557,3 +557,5 @@ const i18n = {
     });
   }
 };
+// Expose globally for React components
+window.i18n = i18n;

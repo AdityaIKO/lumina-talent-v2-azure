@@ -518,3 +518,71 @@ window.AzureAPI = {
     return DB.savePrimary(collection, document);
   }
 };
+
+// ─────────────────────────────────────────────────────────────────────────────
+// [NEW] REAL-TIME MESSAGING SERVICE
+// Infrastructure space for Azure Web PubSub / SignalR integration
+// ─────────────────────────────────────────────────────────────────────────────
+window.MessagingService = {
+  _ws: null,
+  _listeners: [],
+
+  // Connect to Azure Real-time endpoint
+  async connect() {
+    const url = import.meta.env.VITE_AZURE_PUBSUB_URL;
+    if (!url || url.includes('your-resource')) {
+      console.warn('[REAL-TIME] Endpoint not configured. Messaging will run in offline mode.');
+      return;
+    }
+
+    try {
+      this._ws = new WebSocket(url);
+      this._ws.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+        this._listeners.forEach(cb => cb(data));
+      };
+      console.log('[REAL-TIME] Connected to Azure Web PubSub.');
+    } catch (e) {
+      console.error('[REAL-TIME] Connection failed:', e);
+    }
+  },
+
+  // Send a message (Real-time + Save to DB)
+  async sendMessage(senderId, recipientId, text) {
+    const message = {
+      id: `msg-${Date.now()}`,
+      senderId,
+      recipientId,
+      text,
+      timestamp: new Date().toISOString()
+    };
+
+    // 1. Save to Database (Tier 3 - Archive/Chat)
+    await window.DB.save('archive', 'Messages', message);
+
+    // 2. Push to Real-time (if connected)
+    if (this._ws && this._ws.readyState === WebSocket.OPEN) {
+      this._ws.send(JSON.stringify(message));
+    } else {
+      console.log('[MOCK-MESSAGING] Local broadcast:', message);
+      // Simulate local receive for testing
+      setTimeout(() => this._listeners.forEach(cb => cb(message)), 100);
+    }
+
+    return message;
+  },
+
+  // Get message history
+  async getHistory(user1, user2) {
+    // In production, this would query Azure Cosmos DB
+    return [];
+  },
+
+  // Listen for incoming messages
+  subscribe(callback) {
+    this._listeners.push(callback);
+    return () => {
+      this._listeners = this._listeners.filter(cb => cb !== callback);
+    };
+  }
+};

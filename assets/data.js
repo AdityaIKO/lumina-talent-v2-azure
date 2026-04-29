@@ -101,3 +101,5 @@ Best regards,
 Rizki Pratama`
   }
 };
+// Expose globally so React components can access window.DUMMY
+window.DUMMY = DUMMY;
