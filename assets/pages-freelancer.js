@@ -176,33 +176,56 @@ Pages.renderJobDetail = function(jobId) {
   )}`;
   UI.bindLangSwitcher();
 
-  window.runAIAnalysis = () => {
+  window.runAIAnalysis = async () => {
     const panel = document.getElementById('aiPanel');
-    panel.innerHTML = `<div style="display:flex;align-items:center;gap:8px;color:var(--primary-light);margin-bottom:12px"><div style="width:16px;height:16px;border:2px solid var(--primary);border-top-color:transparent;border-radius:50%;animation:spin 0.8s linear infinite"></div> AI sedang menganalisis...</div>`;
-    setTimeout(()=>{
-      panel.innerHTML = `
-        <div>
-          <div style="font-size:0.82rem;font-weight:600;color:var(--accent);margin-bottom:8px" data-i18n="strengths">${i18n.t('strengths')}</div>
-          ${ai.strengths.map(s=>`<div style="display:flex;gap:8px;margin-bottom:6px;font-size:0.82rem"><span style="color:var(--accent)">✓</span>${s}</div>`).join('')}
-          <div class="divider" style="margin:12px 0"></div>
-          <div style="font-size:0.82rem;font-weight:600;color:var(--warning);margin-bottom:8px" data-i18n="improvements">${i18n.t('improvements')}</div>
-          ${ai.improvements.map(s=>`<div style="display:flex;gap:8px;margin-bottom:6px;font-size:0.82rem"><span style="color:var(--warning)">!</span>${s}</div>`).join('')}
-          <div class="divider" style="margin:12px 0"></div>
-          <button class="btn btn-primary w-full" onclick="showProposal()" data-i18n="btn_draft_proposal">${i18n.t('btn_draft_proposal')}</button>
-        </div>`;
-      i18n.applyTranslations();
-    }, 2200);
+    panel.innerHTML = `<div style="display:flex;align-items:center;gap:8px;color:var(--primary-light);margin-bottom:12px"><div style="width:16px;height:16px;border:2px solid var(--primary);border-top-color:transparent;border-radius:50%;animation:spin 0.8s linear infinite"></div> AI (Azure OpenAI) sedang menganalisis...</div>`;
+    
+    // Integrasi Azure OpenAI: Analyze Match
+    const analysisResult = await AzureAPI.analyzeMatch(job.desc, DUMMY.user.freelancer);
+    const strengths = analysisResult.strengths || ai.strengths;
+    const improvements = analysisResult.improvements || ai.improvements;
+    
+    panel.innerHTML = `
+      <div>
+        <div style="font-size:0.82rem;font-weight:600;color:var(--accent);margin-bottom:8px" data-i18n="strengths">${i18n.t('strengths')}</div>
+        ${strengths.map(s=>`<div style="display:flex;gap:8px;margin-bottom:6px;font-size:0.82rem"><span style="color:var(--accent)">✓</span>${s}</div>`).join('')}
+        <div class="divider" style="margin:12px 0"></div>
+        <div style="font-size:0.82rem;font-weight:600;color:var(--warning);margin-bottom:8px" data-i18n="improvements">${i18n.t('improvements')}</div>
+        ${improvements.map(s=>`<div style="display:flex;gap:8px;margin-bottom:6px;font-size:0.82rem"><span style="color:var(--warning)">!</span>${s}</div>`).join('')}
+        <div class="divider" style="margin:12px 0"></div>
+        <button class="btn btn-primary w-full" onclick="showProposal()" data-i18n="btn_draft_proposal">${i18n.t('btn_draft_proposal')}</button>
+      </div>`;
+    i18n.applyTranslations();
   };
 
-  window.showProposal = () => {
+  window.showProposal = async () => {
     document.getElementById('proposalCard').style.display = 'block';
     document.getElementById('proposalCard').scrollIntoView({behavior:'smooth'});
+    
+    const textarea = document.getElementById('proposalID');
+    textarea.value = "Azure OpenAI sedang menyusun draf proposal...";
+    
+    // Integrasi Azure OpenAI: Auto-Draft Proposal
+    const draft = await AzureAPI.generateProposal(job.desc, DUMMY.user.freelancer);
+    textarea.value = draft;
   };
 
-  window.translateProposal = () => {
+  window.translateProposal = async () => {
     const btn = event.target;
-    btn.innerHTML = `<div style="width:14px;height:14px;border:2px solid #fff;border-top-color:transparent;border-radius:50%;animation:spin 0.8s linear infinite;display:inline-block;margin-right:8px"></div> <span data-i18n="translating">${i18n.t('translating')}</span>`;
+    btn.innerHTML = `<div style="width:14px;height:14px;border:2px solid #fff;border-top-color:transparent;border-radius:50%;animation:spin 0.8s linear infinite;display:inline-block;margin-right:8px"></div> <span data-i18n="translating">${i18n.t('translating')} (Azure)...</span>`;
     btn.disabled = true;
-    setTimeout(()=>{ document.getElementById('proposalENSection').style.display='block'; btn.style.display='none'; i18n.applyTranslations(); }, 1800);
+    
+    const idText = document.getElementById('proposalID').value;
+    // Integrasi Azure OpenAI: Translate
+    const translated = await AzureAPI.translateProposal(idText);
+    
+    document.getElementById('proposalENSection').style.display='block'; 
+    btn.style.display='none'; 
+    document.querySelector('#proposalENSection textarea').value = translated;
+    
+    // Integrasi Azure Cosmos DB
+    await AzureAPI.saveToCosmos("Transactions", { action: "Draft Generated", jobId: job.id });
+    
+    i18n.applyTranslations();
   };
 };

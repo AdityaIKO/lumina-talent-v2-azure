@@ -127,13 +127,19 @@ function renderKYCIntl() {
   </div>`;
 }
 
-window.simulateOCR = function(statusId) {
+window.simulateOCR = async function(statusId) {
   const el = document.getElementById(statusId);
   if (!el) return;
-  el.innerHTML = `<div style="display:flex;align-items:center;gap:8px;color:var(--primary-light);font-size:0.85rem"><div style="width:14px;height:14px;border:2px solid var(--primary);border-top-color:transparent;border-radius:50%;animation:spin 0.8s linear infinite"></div><span data-i18n="ocr_processing">${i18n.t('ocr_processing')}</span></div>`;
-  setTimeout(() => {
-    el.innerHTML = `<div style="color:var(--accent);font-size:0.85rem;font-weight:600">✅ KTP berhasil diverifikasi — Andi Rizki Pratama</div>`;
-  }, 2000);
+  el.innerHTML = `<div style="display:flex;align-items:center;gap:8px;color:var(--primary-light);font-size:0.85rem"><div style="width:14px;height:14px;border:2px solid var(--primary);border-top-color:transparent;border-radius:50%;animation:spin 0.8s linear infinite"></div><span data-i18n="ocr_processing">Menganalisis dengan Azure Doc Intelligence...</span></div>`;
+  
+  // Integrasi Azure Document Intelligence: KYC OCR
+  const result = await AzureAPI.verifyKYC(null, 'KTP');
+  
+  if (result.verified) {
+    el.innerHTML = `<div style="color:var(--accent);font-size:0.85rem;font-weight:600">✅ KTP berhasil diverifikasi (Confidence: ${result.confidence}%)</div>`;
+  } else {
+    el.innerHTML = `<div style="color:var(--danger);font-size:0.85rem;font-weight:600">❌ Gagal diverifikasi, silakan coba lagi.</div>`;
+  }
 };
 
 window.completeKYC = function() {
@@ -186,22 +192,27 @@ Pages.renderOnboarding = function() {
   window.nextStep = () => { if(step < totalSteps-1){ step++; render(); } };
   window.prevStep = () => { if(step > 0){ step--; render(); } };
   window.finishOnboarding = () => { UI.toast(i18n.t('success'), 'success'); setTimeout(()=>Router.goTo('freelancer-dashboard'),600); };
-  window.triggerCVParse = () => {
+  window.triggerCVParse = async () => {
     const el = document.getElementById('cvParseResult');
     if(!el) return;
-    el.innerHTML = `<div style="display:flex;align-items:center;gap:8px;color:var(--primary-light);font-size:0.85rem;margin-top:12px"><div style="width:14px;height:14px;border:2px solid var(--primary);border-top-color:transparent;border-radius:50%;animation:spin 0.8s linear infinite"></div><span data-i18n="cv_parsing">${i18n.t('cv_parsing')}</span></div>`;
-    setTimeout(()=>{
-      el.innerHTML = `<div style="background:rgba(0,212,170,0.1);border:1px solid rgba(0,212,170,0.2);border-radius:12px;padding:16px;margin-top:12px">
-        <div style="color:var(--accent);font-weight:600;margin-bottom:8px">✅ <span data-i18n="cv_success">${i18n.t('cv_success')}</span></div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:0.82rem">
-          <div><span style="color:var(--text-muted)">Nama:</span> Rizki Pratama</div>
-          <div><span style="color:var(--text-muted)">Skills:</span> React, Node.js, Python</div>
-          <div><span style="color:var(--text-muted)">Pendidikan:</span> S1 Informatika UI</div>
-          <div><span style="color:var(--text-muted)">Pengalaman:</span> 4 tahun</div>
-        </div>
-      </div>`;
-      i18n.applyTranslations();
-    }, 2500);
+    el.innerHTML = `<div style="display:flex;align-items:center;gap:8px;color:var(--primary-light);font-size:0.85rem;margin-top:12px"><div style="width:14px;height:14px;border:2px solid var(--primary);border-top-color:transparent;border-radius:50%;animation:spin 0.8s linear infinite"></div><span>Azure Doc Intelligence mengekstrak CV...</span></div>`;
+    
+    // Integrasi Azure Document Intelligence: Parse Resume
+    const result = await AzureAPI.parseResume(null);
+    
+    el.innerHTML = `<div style="background:rgba(0,212,170,0.1);border:1px solid rgba(0,212,170,0.2);border-radius:12px;padding:16px;margin-top:12px">
+      <div style="color:var(--accent);font-weight:600;margin-bottom:8px">✅ <span data-i18n="cv_success">${i18n.t('cv_success')}</span></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:0.82rem">
+        <div><span style="color:var(--text-muted)">Status:</span> ${result.status}</div>
+        <div><span style="color:var(--text-muted)">Log:</span> ${result.parsedText}</div>
+        <div style="grid-column: span 2"><hr style="border-color:rgba(0,212,170,0.2);margin:8px 0"></div>
+        <div><span style="color:var(--text-muted)">Nama:</span> Rizki Pratama</div>
+        <div><span style="color:var(--text-muted)">Skills:</span> React, Node.js, Python</div>
+        <div><span style="color:var(--text-muted)">Pendidikan:</span> S1 Informatika UI</div>
+        <div><span style="color:var(--text-muted)">Pengalaman:</span> 4 tahun</div>
+      </div>
+    </div>`;
+    i18n.applyTranslations();
   };
   window.triggerGithub = () => {
     const btn = document.getElementById('ghBtn');

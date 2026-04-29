@@ -168,8 +168,24 @@ Pages.renderApplicants = function(jobId) {
           <span style="font-size:0.82rem;color:var(--text-muted)">${DUMMY.applicants.length} pelamar</span>
         </div>
       </div>
-      <div style="display:flex;flex-direction:column;gap:16px">
-        ${DUMMY.applicants.map((a,idx)=>`
+      <div id="applicantsList" style="display:flex;flex-direction:column;gap:16px">
+        <div style="text-align:center;padding:40px;color:var(--text-muted)">
+           <div style="width:24px;height:24px;border:3px solid var(--primary);border-top-color:transparent;border-radius:50%;animation:spin 0.8s linear infinite;margin:0 auto 16px"></div>
+           Azure OpenAI sedang menyortir pelamar...
+        </div>
+      </div>
+    </main>
+  </div>`;
+  UI.bindLangSwitcher();
+  window.hireApplicant = (id) => { UI.toast(i18n.t('success'), 'success'); setTimeout(()=>Router.goTo('employer-escrow'),800); };
+  
+  // Asynchronous Azure API call for Smart Sorting
+  setTimeout(async () => {
+    const sortedApplicants = await AzureAPI.smartSortApplicants(DUMMY.applicants, job);
+    const listEl = document.getElementById('applicantsList');
+    if (!listEl) return;
+    
+    listEl.innerHTML = sortedApplicants.map((a,idx)=>`
         <div class="card ${a.status==='hired'?'border-color:rgba(0,212,170,0.4);':''}" style="${a.status==='hired'?'border-color:rgba(0,212,170,0.4)':''}">
           <div style="display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap">
             <div style="display:flex;align-items:center;gap:3px;flex-shrink:0;flex-direction:column">
@@ -212,12 +228,9 @@ Pages.renderApplicants = function(jobId) {
           `<div style="font-size:0.875rem;line-height:1.8;white-space:pre-line">${a.proposal}</div>`,
           `<button class="btn btn-ghost" onclick="UI.closeModal('proposalModal${a.id}')" data-i18n="close">${i18n.t('close')}</button>
            <button class="btn btn-primary" onclick="hireApplicant(${a.id});UI.closeModal('proposalModal${a.id}')" data-i18n="btn_accept">${i18n.t('btn_accept')}</button>`
-        )}`).join('')}
-      </div>
-    </main>
-  </div>`;
-  UI.bindLangSwitcher();
-  window.hireApplicant = (id) => { UI.toast(i18n.t('success'), 'success'); setTimeout(()=>Router.goTo('employer-escrow'),800); };
+        )}`).join('');
+    UI.bindLangSwitcher();
+  }, 100);
 };
 
 // ── Employer Escrow ───────────────────────────────────────────────

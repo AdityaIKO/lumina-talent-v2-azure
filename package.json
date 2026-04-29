@@ -1,0 +1,19 @@
+{
+  "name": "lumina_talent-main",
+  "version": "1.0.0",
+  "description": "**Lumina Talent** adalah sebuah platform talent marketplace yang menghubungkan **freelancer digital Indonesia** dengan **klien global**, dilengkapi sistem pembayaran lintas negara (cross-border payment).",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@azure/ai-form-recognizer": "^5.1.0",
+    "@azure/cosmos": "^4.9.3",
+    "@types/node": "^25.6.0",
+    "openai": "^6.34.0",
+    "typescript": "^6.0.3"
+  }
+}
