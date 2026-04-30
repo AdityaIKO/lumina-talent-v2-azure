@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import Navbar from '../../components/Navbar';
 import Sidebar from '../../components/Sidebar';
 import useAppNavigate from '../../hooks/useAppNavigate';
@@ -12,6 +12,7 @@ const AzureAPI = window.AzureAPI || {};
 export default function Pelamar() {
   const { jobId } = useParams();
   const nav = useAppNavigate();
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [applicants, setApplicants] = useState([]);
   const [selectedApplicant, setSelectedApplicant] = useState(null);
@@ -86,7 +87,13 @@ export default function Pelamar() {
                       <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '6px', flexWrap: 'wrap' }}>
                         <div dangerouslySetInnerHTML={{ __html: avatarHTML(a.initials, 'md') }} />
                         <div>
-                          <div style={{ fontWeight: 700, fontSize: '1rem' }}>{a.name}</div>
+                          <div
+                            style={{ fontWeight: 700, fontSize: '1rem', cursor: 'pointer', color: 'var(--primary-light)' }}
+                            onClick={() => navigate(`/profil/${a.uid || a.id}`)}
+                            title="Lihat profil lengkap freelancer ini"
+                          >
+                            {a.name} 👤
+                          </div>
                           <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>{a.title} · {a.experience}</div>
                         </div>
                         {a.verified && <span className="badge badge-accent">✅ Verified</span>}
@@ -114,6 +121,10 @@ export default function Pelamar() {
                         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                           <button className="btn btn-primary btn-sm" onClick={() => handleHire(a.id)}>✅ Accept</button>
                           <button className="btn btn-ghost btn-sm" onClick={() => { setSelectedApplicant(a); setModalType('proposal'); }}>👁 Lihat Proposal</button>
+                          <button
+                            className="btn btn-outline btn-sm"
+                            onClick={() => navigate(`/profil/${a.uid || a.id}`)}
+                          >👤 Lihat Profil</button>
                           <button className="btn btn-outline btn-sm" onClick={() => { setSelectedApplicant(a); setModalType('counter'); }}>🔄 Counter-Offer</button>
                           <button className="btn btn-danger btn-sm" onClick={() => { setSelectedApplicant(a); setModalType('reject'); }}>❌ Reject</button>
                         </div>

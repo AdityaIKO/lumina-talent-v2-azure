@@ -13,7 +13,7 @@ export default function useAppNavigate() {
 
     // Public
     toLanding:         ()          => navigate('/landing'),
-    toLogin:           ()          => navigate('/login'),
+    toLogin:           (state)     => navigate('/login', { state }),
     toRegister:        ()          => navigate('/daftar'),
     toKYC:             ()          => navigate('/kyc'),
 

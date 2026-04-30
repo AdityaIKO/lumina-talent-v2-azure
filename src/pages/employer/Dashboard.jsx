@@ -3,19 +3,21 @@ import Navbar from '../../components/Navbar';
 import Sidebar from '../../components/Sidebar';
 import useAppNavigate from '../../hooks/useAppNavigate';
 import { statusBadgeHTML } from '../../components/uiHelpers';
+import { useAuth } from '../../context/AuthContext';
 
 const i18n = window.i18n || { t: k => k };
 const DUMMY = window.DUMMY || {};
 
 export default function Dashboard() {
   const nav = useAppNavigate();
-  const u = DUMMY.user?.employer || {};
+  const { user: authUser } = useAuth();
+  const u = authUser || {};
 
   const stats = [
-    { icon: '👥', label: i18n.t('emp_stat_applicants'), val: u.stats?.applicants, change: '↑ 12 baru minggu ini', dir: 'up' },
-    { icon: '🔒', label: i18n.t('emp_stat_escrow'), val: u.stats?.escrow, change: '2 proyek aktif', dir: '' },
-    { icon: '📋', label: i18n.t('emp_stat_active_jobs'), val: u.stats?.activeJobs, change: '1 draft', dir: '' },
-    { icon: '🔄', label: i18n.t('emp_stat_projects'), val: u.stats?.projects, change: '1 menunggu review', dir: '' },
+    { icon: '👥', label: i18n.t('emp_stat_applicants'), val: u.stats?.applicants || 0, change: u.stats ? '↑ 12 baru' : '-', dir: 'up' },
+    { icon: '🔒', label: i18n.t('emp_stat_escrow'), val: u.stats?.escrow || 'Rp 0', change: u.stats ? '2 proyek' : '-', dir: '' },
+    { icon: '📋', label: i18n.t('emp_stat_active_jobs'), val: u.stats?.activeJobs || 0, change: u.stats ? '1 draft' : '-', dir: '' },
+    { icon: '🔄', label: i18n.t('emp_stat_projects'), val: u.stats?.projects || 0, change: u.stats ? '1 review' : '-', dir: '' },
   ];
 
   return (
@@ -68,7 +70,7 @@ export default function Dashboard() {
                 </tr>
               </thead>
               <tbody>
-                {(DUMMY.empJobs || []).map(j => (
+                {authUser?.stats ? (DUMMY.empJobs || []).map(j => (
                   <tr key={j.id}>
                     <td style={{ fontWeight: 600 }}>{j.title}</td>
                     <td dangerouslySetInnerHTML={{ __html: statusBadgeHTML(j.status) }}></td>
@@ -84,7 +86,13 @@ export default function Dashboard() {
                       </div>
                     </td>
                   </tr>
-                ))}
+                )) : (
+                  <tr>
+                    <td colSpan="6" style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
+                      Belum ada lowongan yang dibuat.
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
@@ -92,7 +100,7 @@ export default function Dashboard() {
           {/* Recent Applicants Preview */}
           <h3 style={{ margin: '32px 0 16px' }}>{i18n.t('nav_applicants')}</h3>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>
-            {(DUMMY.applicants || []).slice(0, 3).map(a => (
+            {authUser?.stats ? (DUMMY.applicants || []).slice(0, 3).map(a => (
               <div key={a.id} className="card">
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
                   <div className="avatar-placeholder avatar-sm">{a.initials}</div>
@@ -108,7 +116,11 @@ export default function Dashboard() {
                   Review
                 </button>
               </div>
-            ))}
+            )) : (
+              <div className="card" style={{ gridColumn: 'span 3', textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
+                Belum ada pelamar saat ini.
+              </div>
+            )}
           </div>
         </main>
       </div>

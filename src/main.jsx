@@ -4,7 +4,10 @@ import { BrowserRouter } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import AppRouter from './routes/AppRouter';
 import './services/azure-api';
-import '../assets/style.css';
+import '../public/assets/style.css';
+
+// Initialize i18n from localStorage before rendering
+if (window.i18n) window.i18n.init();
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>

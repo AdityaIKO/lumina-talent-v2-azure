@@ -1,20 +1,32 @@
-import { useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import useAppNavigate from '../hooks/useAppNavigate';
-import { bindLangSwitcher } from './uiHelpers';
 
 const DUMMY = window.DUMMY || {};
+const i18n = window.i18n || { t: k => k };
 
 export default function Navbar({ role = null }) {
-  const { logout } = useAuth();
+  const { logout, user: authUser } = useAuth();
   const nav = useAppNavigate();
+  const [currentLang, setCurrentLang] = useState(window.i18n?.currentLang || 'id');
 
-  useEffect(() => { bindLangSwitcher(); });
+  const handleLangChange = (lang) => {
+    if (window.i18n) {
+      window.i18n.setLang(lang);
+      window.location.reload();
+    }
+  };
 
   const isFreelancer = role === 'freelancer';
   const isEmployer   = role === 'employer';
-  const user = role === 'freelancer' ? DUMMY.user?.freelancer : DUMMY.user?.employer;
+  const user = authUser || {};
+  const initials = user.name ? user.name.split(' ').map(n => n[0]).join('').toUpperCase() : '?';
+
+  const handleLogout = () => {
+    logout();
+    window.location.href = '/';
+  };
 
   return (
     <nav className="navbar">
@@ -53,19 +65,29 @@ export default function Navbar({ role = null }) {
 
         <div className="nav-actions">
           <div className="lang-switcher">
-            <button className="lang-btn" data-lang="id">🇮🇩 ID</button>
-            <button className="lang-btn" data-lang="en">🇬🇧 EN</button>
+            <button 
+              className={`lang-btn ${currentLang === 'id' ? 'active' : ''}`} 
+              onClick={() => handleLangChange('id')}
+            >
+              🇮🇩 ID
+            </button>
+            <button 
+              className={`lang-btn ${currentLang === 'en' ? 'active' : ''}`} 
+              onClick={() => handleLangChange('en')}
+            >
+              🇬🇧 EN
+            </button>
           </div>
           {role ? (
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}
-              onClick={() => { logout(); nav.toLanding(); }}>
-              <div className={`avatar-placeholder avatar-sm`}>{user?.initials || '?'}</div>
-              <span style={{ fontSize: '0.85rem', fontWeight: 500 }}>{user?.name?.split(' ')[0]}</span>
+              onClick={handleLogout}>
+              <div className={`avatar-placeholder avatar-sm`}>{initials}</div>
+              <span style={{ fontSize: '0.85rem', fontWeight: 500 }}>{i18n.t('nav_signout')}</span>
             </div>
           ) : (
             <>
-              <button className="btn btn-ghost btn-sm" onClick={nav.toLogin}>Sign In</button>
-              <button className="btn btn-primary btn-sm" onClick={nav.toRegister}>Daftar</button>
+              <button className="btn btn-ghost btn-sm" onClick={() => nav.toLogin()}>{i18n.t('nav_signin')}</button>
+              <button className="btn btn-primary btn-sm" onClick={() => nav.toRegister()}>{i18n.t('nav_signup')}</button>
             </>
           )}
         </div>

@@ -11,15 +11,33 @@ export default function KYC() {
   const { role, verify } = useAuth();
   const [kycType, setKycType] = useState('id'); // 'id' or 'intl'
   const [step, setStep] = useState(1); // 1: upload, 2: processing, 3: otp
-  const [attempts, setAttempts] = useState(0);
+  const [ktpFileName, setKtpFileName] = useState('');
+  const [otp, setOtp] = useState(['', '', '', '', '', '']);
+  const fileRef = React.useRef(null);
 
-  const startOCR = () => {
-    setStep(2);
-    // Simulate Azure Document Intelligence OCR
-    setTimeout(() => {
-      setStep(3);
-      toast('OCR Berhasil! Mohon verifikasi OTP.', 'success');
-    }, 2500);
+  const handleFileSelect = (e) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setKtpFileName(file.name);
+      setStep(2);
+      // Simulate Azure Document Intelligence OCR
+      setTimeout(() => {
+        setStep(3);
+        toast('OCR Berhasil! Data KTP Anda telah divalidasi oleh Azure AI.', 'success');
+      }, 2000);
+    }
+  };
+
+  const updateOtpDigit = (idx, val) => {
+    if (!/^\d*$/.test(val)) return;
+    const newOtp = [...otp];
+    newOtp[idx] = val.slice(-1);
+    setOtp(newOtp);
+    // Auto focus next
+    if (val && idx < 5) {
+      const next = document.getElementById(`otp-${idx + 1}`);
+      next?.focus();
+    }
   };
 
   const handleVerifyOTP = () => {
@@ -85,10 +103,11 @@ export default function KYC() {
                 
                 <div className="form-group">
                   <label className="form-label">{kycType === 'id' ? i18n.t('upload_ktp') : 'Upload Passport'}</label>
-                  <div className="upload-zone" onClick={startOCR}>
+                  <input ref={fileRef} type="file" accept="image/*,.pdf" style={{ display: 'none' }} onChange={handleFileSelect} />
+                  <div className="upload-zone" onClick={() => fileRef.current.click()}>
                     <div className="upload-icon">📁</div>
-                    <div style={{ fontWeight: 600, marginBottom: '6px' }}>Klik atau seret file ke sini</div>
-                    <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>PNG, JPG atau PDF · Max 5MB</div>
+                    <div style={{ fontWeight: 600, marginBottom: '6px' }}>{ktpFileName || 'Klik untuk Pilih File KTP'}</div>
+                    <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>Format: PNG, JPG atau PDF · Max 5MB</div>
                   </div>
                 </div>
 
@@ -123,8 +142,16 @@ export default function KYC() {
                   <p style={{ marginTop: '8px' }}>{i18n.t('kyc_otp_sub')}</p>
                 </div>
                 <div style={{ display: 'flex', gap: '10px', justifyContent: 'center', margin: '20px 0' }}>
-                  {[1, 2, 3, 4, 5, 6].map(i => (
-                    <input key={i} className="form-input" style={{ width: '45px', textAlign: 'center', fontSize: '1.2rem' }} maxLength="1" defaultValue={i*2-1} />
+                  {otp.map((digit, i) => (
+                    <input 
+                      key={i} 
+                      id={`otp-${i}`}
+                      className="form-input" 
+                      style={{ width: '45px', textAlign: 'center', fontSize: '1.2rem' }} 
+                      maxLength="1" 
+                      value={digit}
+                      onChange={(e) => updateOtpDigit(i, e.target.value)}
+                    />
                   ))}
                 </div>
                 <button className="btn btn-primary w-full" onClick={handleVerifyOTP}>

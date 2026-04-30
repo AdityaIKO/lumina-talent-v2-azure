@@ -1,5 +1,5 @@
 const i18n = {
-  currentLang: localStorage.getItem('lumina_lang') || 'id',
+  currentLang: localStorage.getItem('language') || 'id',
   
   messages: {
     id: {
@@ -527,11 +527,15 @@ const i18n = {
 
   setLang(lang) {
     this.currentLang = lang;
-    localStorage.setItem('lumina_lang', lang);
+    localStorage.setItem('language', lang);
     this.applyTranslations();
     document.querySelectorAll('.lang-btn').forEach(b => {
       b.classList.toggle('active', b.dataset.lang === lang);
     });
+  },
+
+  changeLanguage(lang) {
+    this.setLang(lang);
   },
 
   applyTranslations() {

@@ -1,14 +1,44 @@
 import React, { useState } from 'react';
 import Navbar from '../../components/Navbar';
 import Sidebar from '../../components/Sidebar';
-import { statusBadgeHTML, toast } from '../../components/uiHelpers';
+import { useAuth } from '../../context/AuthContext';
+import { statusBadgeHTML, toast, formatIDR } from '../../components/uiHelpers';
 
 const i18n = window.i18n || { t: k => k };
-const DUMMY = window.DUMMY || {};
+
+const INDO_BANKS = [
+  'BCA', 'Mandiri', 'BNI', 'BRI', 'CIMB Niaga', 'Permata', 'Danamon', 'Bank Jago', 'GoPay', 'OVO'
+];
 
 export default function Keuangan() {
-  const u = DUMMY.user?.freelancer || {};
+  const { user, updateProfile } = useAuth();
   const [showWithdrawModal, setShowWithdrawModal] = useState(false);
+  const [showBankModal, setShowBankModal] = useState(false);
+  
+  // Bank Form State
+  const [bankName, setBankName] = useState('');
+  const [accNumber, setAccNumber] = useState('');
+  const [accName, setAccName] = useState('');
+
+  const hasBank = user?.bankAccount?.accountNumber;
+
+  const handleSaveBank = async () => {
+    if (!bankName || !accNumber || !accName) return toast('Lengkapi semua data bank!', 'error');
+    try {
+      await updateProfile({
+        bankAccount: {
+          bankName,
+          accountNumber: accNumber,
+          accountName: accName,
+          updatedAt: new Date().toISOString()
+        }
+      });
+      toast('Rekening bank berhasil disimpan!', 'success');
+      setShowBankModal(false);
+    } catch (e) {
+      toast('Gagal menyimpan data bank.', 'error');
+    }
+  };
 
   return (
     <div style={{ paddingTop: 68 }}>
@@ -25,20 +55,39 @@ export default function Keuangan() {
           <div className="grid-3" style={{ marginBottom: '32px' }}>
             <div className="card" style={{ background: 'linear-gradient(135deg,rgba(0,212,170,0.15),rgba(0,212,170,0.05))', borderColor: 'rgba(0,212,170,0.3)' }}>
               <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)', marginBottom: '8px' }}>{i18n.t('balance_available')}</div>
-              <div style={{ fontSize: '1.8rem', fontWeight: 800, color: 'var(--accent)' }}>{u.balance?.available}</div>
-              <button className="btn btn-accent btn-sm" style={{ marginTop: '12px' }} onClick={() => setShowWithdrawModal(true)}>
-                {i18n.t('btn_withdraw')}
+              <div style={{ fontSize: '1.8rem', fontWeight: 800, color: 'var(--accent)' }}>{formatIDR(user?.balance?.available || 0)}</div>
+              <button 
+                className="btn btn-accent btn-sm" 
+                style={{ marginTop: '12px' }} 
+                onClick={() => hasBank ? setShowWithdrawModal(true) : setShowBankModal(true)}
+              >
+                {hasBank ? i18n.t('btn_withdraw') : 'Atur Rekening'}
               </button>
             </div>
             <div className="card">
               <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)', marginBottom: '8px' }}>{i18n.t('balance_pending')}</div>
-              <div style={{ fontSize: '1.8rem', fontWeight: 800, color: 'var(--warning)' }}>{u.balance?.pending}</div>
-              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '4px' }}>Dari 2 proyek aktif</div>
+              <div style={{ fontSize: '1.8rem', fontWeight: 800, color: 'var(--warning)' }}>{formatIDR(user?.balance?.pending || 0)}</div>
+              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '4px' }}>Proyek dalam pengerjaan</div>
             </div>
             <div className="card">
               <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)', marginBottom: '8px' }}>{i18n.t('total_earned')}</div>
-              <div style={{ fontSize: '1.8rem', fontWeight: 800 }}>{u.balance?.total}</div>
-              <div style={{ fontSize: '0.75rem', color: 'var(--accent)', marginTop: '4px' }}>↑ Rp 4,75M bulan ini</div>
+              <div style={{ fontSize: '1.8rem', fontWeight: 800 }}>{formatIDR(user?.balance?.total || 0)}</div>
+              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '4px' }}>Total pendapatan bersih</div>
+            </div>
+          </div>
+
+          {/* Bank Account Section */}
+          <div className="card" style={{ marginBottom: '24px', borderLeft: '4px solid var(--primary)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <h4 style={{ marginBottom: '4px' }}>Metode Penarikan</h4>
+                <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>
+                  {hasBank ? `${user.bankAccount.bankName} • ${user.bankAccount.accountNumber}` : 'Rekening bank belum diatur.'}
+                </p>
+              </div>
+              <button className="btn btn-ghost btn-sm" onClick={() => setShowBankModal(true)}>
+                {hasBank ? 'Ubah' : 'Hubungkan Bank'}
+              </button>
             </div>
           </div>
 
@@ -72,16 +121,24 @@ export default function Keuangan() {
                 </tr>
               </thead>
               <tbody>
-                {(DUMMY.transactions || []).map(t => (
-                  <tr key={t.id}>
-                    <td>{t.desc}</td>
-                    <td style={{ color: 'var(--text-muted)' }}>{t.date}</td>
-                    <td style={{ fontWeight: 700, color: t.amount.startsWith('+') ? 'var(--accent)' : 'var(--danger)' }}>
-                      {t.amount}
+                {(!user?.transactions || user.transactions.length === 0) ? (
+                  <tr>
+                    <td colSpan="4" style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
+                      Belum ada riwayat transaksi.
                     </td>
-                    <td><div dangerouslySetInnerHTML={{ __html: statusBadgeHTML(t.status) }} /></td>
                   </tr>
-                ))}
+                ) : (
+                  user.transactions.map(t => (
+                    <tr key={t.id}>
+                      <td>{t.desc}</td>
+                      <td style={{ color: 'var(--text-muted)' }}>{t.date}</td>
+                      <td style={{ fontWeight: 700, color: t.amount.startsWith('+') ? 'var(--accent)' : 'var(--danger)' }}>
+                        {t.amount}
+                      </td>
+                      <td><div dangerouslySetInnerHTML={{ __html: statusBadgeHTML(t.status) }} /></td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>
@@ -104,11 +161,8 @@ export default function Keuangan() {
                 </div>
                 <div className="form-group">
                   <label className="form-label">{i18n.t('withdraw_method')}</label>
-                  <select className="form-select">
-                    <option>BCA - 1234****</option>
-                    <option>Mandiri - 5678****</option>
-                    <option>GoPay</option>
-                    <option>OVO</option>
+                  <select className="form-select" value={user?.bankAccount?.bankName}>
+                    <option>{user?.bankAccount?.bankName} - {user?.bankAccount?.accountNumber}</option>
                   </select>
                 </div>
                 <div className="form-group">
@@ -122,6 +176,44 @@ export default function Keuangan() {
               <button className="btn btn-accent" onClick={() => { setShowWithdrawModal(false); toast(i18n.t('success'), 'success'); }}>
                 {i18n.t('btn_withdraw')}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Bank Setup Modal */}
+      {showBankModal && (
+        <div className="modal open">
+          <div className="modal-content">
+            <div className="modal-header">
+              <h3>Pengaturan Rekening Bank</h3>
+              <button className="btn-close" onClick={() => setShowBankModal(false)}>×</button>
+            </div>
+            <div className="modal-body">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                <div className="form-group">
+                  <label className="form-label">Nama Bank</label>
+                  <select className="form-select" value={bankName} onChange={(e) => setBankName(e.target.value)}>
+                    <option value="">Pilih Bank</option>
+                    {INDO_BANKS.map(b => <option key={b} value={b}>{b}</option>)}
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Nomor Rekening</label>
+                  <input className="form-input" placeholder="Masukkan nomor rekening" value={accNumber} onChange={(e) => setAccNumber(e.target.value)} />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Nama Pemilik Rekening</label>
+                  <input className="form-input" placeholder="Nama sesuai buku tabungan" value={accName} onChange={(e) => setAccName(e.target.value)} />
+                </div>
+                <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                  * Pastikan nama pemilik rekening sama dengan nama pada profil Anda untuk kelancaran verifikasi penarikan.
+                </p>
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button className="btn btn-ghost" onClick={() => setShowBankModal(false)}>Batal</button>
+              <button className="btn btn-primary" onClick={handleSaveBank}>Simpan Rekening</button>
             </div>
           </div>
         </div>

@@ -8,6 +8,7 @@ import Login    from '../pages/auth/Login';
 import Register from '../pages/auth/Register';
 import KYC      from '../pages/shared/KYC';
 import NotFound from '../pages/shared/NotFound';
+import PublicProfile from '../pages/shared/PublicProfile';
 
 // Freelancer
 import FreelancerBeranda      from '../pages/freelancer/Beranda';
@@ -47,6 +48,7 @@ export default function AppRouter() {
       <Route path="/login"    element={<Login />} />
       <Route path="/daftar"   element={<Register />} />
       <Route path="/kyc"      element={<KYC />} />
+      <Route path="/profil/:userId" element={<PublicProfile />} />
 
       {/* Freelancer routes */}
       <Route path="/freelancer/beranda"

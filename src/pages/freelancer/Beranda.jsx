@@ -3,20 +3,25 @@ import Navbar from '../../components/Navbar';
 import Sidebar from '../../components/Sidebar';
 import JobCard from '../../components/JobCard';
 import useAppNavigate from '../../hooks/useAppNavigate';
+import { useAuth } from '../../context/AuthContext';
 
 const i18n = window.i18n || { t: k => k };
 const DUMMY = window.DUMMY || {};
 
 export default function Beranda() {
   const nav = useAppNavigate();
-  const u = DUMMY.user?.freelancer || {};
+  const { user: authUser } = useAuth();
+  
+  // Use authenticated user or fallback to dummy
+  const u = authUser || {};
+  const completion = u.profileCompleted || 0;
 
-  // Mock stats from original code
+  // Mock stats - set to 0 if new user
   const stats = [
-    { icon: '🎯', label: i18n.t('dash_match_jobs'), val: u.stats?.matchJobs, change: '↑ 4 baru', dir: 'up' },
-    { icon: '📤', label: i18n.t('dash_applications'), val: u.stats?.applications, change: '2 ditinjau', dir: 'up' },
-    { icon: '🔄', label: i18n.t('dash_active_projects'), val: u.stats?.activeProjects, change: '1 deadline minggu ini', dir: '' },
-    { icon: '💰', label: i18n.t('dash_earnings'), val: u.stats?.earnings, change: '↑ Rp 4,75M bulan ini', dir: 'up' },
+    { icon: '🎯', label: i18n.t('dash_match_jobs'), val: u.stats?.matchJobs || 0, change: u.stats ? '↑ 4 baru' : '-', dir: 'up' },
+    { icon: '📤', label: i18n.t('dash_applications'), val: u.stats?.applications || 0, change: u.stats ? '2 ditinjau' : '-', dir: 'up' },
+    { icon: '🔄', label: i18n.t('dash_active_projects'), val: u.stats?.activeProjects || 0, change: u.stats ? '1 deadline' : '-', dir: '' },
+    { icon: '💰', label: i18n.t('dash_earnings'), val: u.stats?.earnings || 'Rp 0', change: u.stats ? '↑ Rp 4,75M' : '-', dir: 'up' },
   ];
 
   return (
@@ -28,7 +33,7 @@ export default function Beranda() {
         <main className="main-content">
           <div className="page-header">
             <h2>
-              <span>{i18n.t('dash_greeting')}</span>, {u.name?.split(' ')[0]} 👋
+              <span>{i18n.t('dash_greeting')}</span>, {u.name ? u.name.split(' ')[0] : 'User'} 👋
             </h2>
             <p style={{ marginTop: '4px', fontSize: '0.875rem' }}>Senin, 27 April 2026</p>
           </div>
@@ -53,18 +58,20 @@ export default function Beranda() {
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' }}>
               <div style={{ flex: 1 }}>
                 <div style={{ fontWeight: 600, marginBottom: '6px' }}>
-                  Profil {u.matchScore}% Lengkap
+                  Profil {completion}% Lengkap
                 </div>
                 <div className="progress-bar" style={{ maxWidth: '400px' }}>
-                  <div className="progress-fill" style={{ width: `${u.matchScore}%` }}></div>
+                  <div className="progress-fill" style={{ width: `${completion}%` }}></div>
                 </div>
                 <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '6px' }}>
-                  Tambahkan sertifikat untuk mencapai 100%
+                  {completion < 100 ? 'Lengkapi profil Anda untuk meningkatkan visibilitas di mata klien.' : 'Profil Anda sudah lengkap! Anda siap melamar pekerjaan.'}
                 </div>
               </div>
-              <button className="btn btn-primary btn-sm" onClick={() => nav.toProfil()}>
-                Lengkapi Profil →
-              </button>
+              {completion < 100 && (
+                <button className="btn btn-primary btn-sm" onClick={() => nav.toProfil()}>
+                  Lengkapi Profil →
+                </button>
+              )}
             </div>
           </div>
 

@@ -8,13 +8,29 @@ const i18n = window.i18n || { t: k => k };
 
 export default function Register() {
   const [role, setRole] = useState('freelancer');
-  const { login } = useAuth();
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  
+  const { signup } = useAuth();
   const nav = useAppNavigate();
 
-  function doSignup() {
-    login(role);
-    toast(i18n.t('success'), 'success');
-    setTimeout(() => nav.toKYC(), 600);
+  async function doSignup(e) {
+    if (e) e.preventDefault();
+    if (!name || !email || !password) return toast('Harap isi semua field', 'error');
+    
+    setLoading(true);
+    try {
+      await signup({ name, email, password, role });
+      // Beri notifikasi sukses dan arahkan ke login dengan membawa state info
+      toast('Registrasi Berhasil! Silakan cek email Anda.', 'success');
+      setTimeout(() => nav.toLogin({ info: 'VERIFY_EMAIL_SENT' }), 1000);
+    } catch (err) {
+      toast(err.message, 'error');
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
@@ -42,12 +58,21 @@ export default function Register() {
           </div>
           {/* Form */}
           <div className="card-flat" style={{ display:'flex',flexDirection:'column',gap:16 }}>
-            <div className="form-group"><label className="form-label">{i18n.t('label_fullname')}</label><input className="form-input" type="text" placeholder="Rizki Pratama" /></div>
-            <div className="form-group"><label className="form-label">{i18n.t('label_email')}</label><input className="form-input" type="email" placeholder="email@contoh.com" /></div>
-            <div className="form-group"><label className="form-label">{i18n.t('label_phone')}</label><input className="form-input" type="tel" placeholder="+62 8xx xxxx xxxx" /></div>
-            <div className="form-group"><label className="form-label">{i18n.t('label_password')}</label><input className="form-input" type="password" placeholder="••••••••" /></div>
-            <div className="form-group"><label className="form-label">{i18n.t('label_confirm_pass')}</label><input className="form-input" type="password" placeholder="••••••••" /></div>
-            <button className="btn btn-primary w-full" style={{ marginTop:8 }} onClick={doSignup}>{i18n.t('btn_create_account')}</button>
+            <div className="form-group">
+              <label className="form-label">{i18n.t('label_fullname')}</label>
+              <input className="form-input" type="text" placeholder="Rizki Pratama" value={name} onChange={e => setName(e.target.value)} />
+            </div>
+            <div className="form-group">
+              <label className="form-label">{i18n.t('label_email')}</label>
+              <input className="form-input" type="email" placeholder="email@contoh.com" value={email} onChange={e => setEmail(e.target.value)} />
+            </div>
+            <div className="form-group">
+              <label className="form-label">{i18n.t('label_password')}</label>
+              <input className="form-input" type="password" placeholder="••••••••" value={password} onChange={e => setPassword(e.target.value)} />
+            </div>
+            <button className="btn btn-primary w-full" style={{ marginTop:8 }} onClick={doSignup} disabled={loading}>
+              {loading ? '...' : i18n.t('btn_create_account')}
+            </button>
           </div>
           <div style={{ textAlign:'center',marginTop:20,fontSize:'0.875rem',color:'var(--text-muted)' }}>
             {i18n.t('have_account')}

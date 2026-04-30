@@ -36,3 +36,12 @@ export function t(key) {
 export function bindLangSwitcher() {
   if (window.UI?.bindLangSwitcher) window.UI.bindLangSwitcher();
 }
+
+// Currency formatter
+export function formatIDR(amount) {
+  return new Intl.NumberFormat('id-ID', {
+    style: 'currency',
+    currency: 'IDR',
+    minimumFractionDigits: 0
+  }).format(amount);
+}
