@@ -66,6 +66,9 @@ export function AuthProvider({ children }) {
       profile = result.user;
     }
 
+    // 🔧 FIX: Update React state IMMEDIATELY before returning
+    setUser({ ...fbUser, ...profile });
+    setRole(profile.role);
     localStorage.setItem('lumina_role', profile.role);
     localStorage.setItem('user_session', JSON.stringify({ ...fbUser, ...profile }));
     

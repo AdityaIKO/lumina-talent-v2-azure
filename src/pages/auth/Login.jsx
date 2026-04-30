@@ -42,12 +42,15 @@ export default function Login() {
       const profile = await login(email, password);
       
       // 4. Redirect berdasarkan Role
+      // 🔧 FIX: Use setTimeout to ensure state is updated before navigation
       toast(i18n.t('success'), 'success');
-      if (profile.role === 'freelancer') {
-        nav.toFreelancerHome();
-      } else {
-        nav.toEmployerHome();
-      }
+      setTimeout(() => {
+        if (profile.role === 'freelancer') {
+          nav.toFreelancerHome();
+        } else {
+          nav.toEmployerHome();
+        }
+      }, 100);
 
     } catch (error) {
       console.error('Login Error:', error);
