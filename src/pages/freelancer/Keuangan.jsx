@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import Navbar from '../../components/Navbar';
 import Sidebar from '../../components/Sidebar';
 import { useAuth } from '../../context/AuthContext';
@@ -14,16 +14,75 @@ export default function Keuangan() {
   const { user, updateProfile } = useAuth();
   const [showWithdrawModal, setShowWithdrawModal] = useState(false);
   const [showBankModal, setShowBankModal] = useState(false);
-  
-  // Bank Form State
+  const [showKycModal, setShowKycModal] = useState(false);
+
+  // Bank form state
   const [bankName, setBankName] = useState('');
   const [accNumber, setAccNumber] = useState('');
   const [accName, setAccName] = useState('');
 
+  // KYC state
+  const [kycStep, setKycStep] = useState(1); // 1: upload, 2: processing, 3: otp
+  const [kycType, setKycType] = useState('id');
+  const [ktpFileName, setKtpFileName] = useState('');
+  const [kycOtp, setKycOtp] = useState(['', '', '', '', '', '']);
+  const [pendingBankModal, setPendingBankModal] = useState(false);
+  const fileRef = useRef(null);
+
   const hasBank = user?.bankAccount?.accountNumber;
+  const isKycVerified = user?.kycVerified;
+
+  // Opens KYC first if not verified, otherwise goes straight to bank modal
+  const handleConnectRekening = () => {
+    if (isKycVerified) {
+      setShowBankModal(true);
+    } else {
+      setKycStep(1);
+      setKtpFileName('');
+      setKycOtp(['', '', '', '', '', '']);
+      setPendingBankModal(true);
+      setShowKycModal(true);
+    }
+  };
+
+  const handleKycFileSelect = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setKtpFileName(file.name);
+    setKycStep(2);
+    // Simulate Azure Document Intelligence OCR processing
+    setTimeout(() => {
+      setKycStep(3);
+      toast('OCR Berhasil! Data identitas Anda telah divalidasi oleh Azure AI.', 'success');
+    }, 2500);
+  };
+
+  const updateKycOtpDigit = (idx, val) => {
+    if (!/^\d*$/.test(val)) return;
+    const next = [...kycOtp];
+    next[idx] = val.slice(-1);
+    setKycOtp(next);
+    if (val && idx < 5) document.getElementById(`kyc-otp-${idx + 1}`)?.focus();
+  };
+
+  const handleKycVerify = async () => {
+    const code = kycOtp.join('');
+    if (code.length < 6) return toast('Masukkan 6 digit kode OTP.', 'error');
+    try {
+      await updateProfile({ kycVerified: true, kycVerifiedAt: new Date().toISOString() });
+      toast('Verifikasi identitas berhasil!', 'success');
+      setShowKycModal(false);
+      if (pendingBankModal) {
+        setPendingBankModal(false);
+        setShowBankModal(true);
+      }
+    } catch {
+      toast('Gagal menyimpan status verifikasi.', 'error');
+    }
+  };
 
   const handleSaveBank = async () => {
-    if (!bankName || !accNumber || !accName) return toast('Lengkapi semua data bank!', 'error');
+    if (!bankName || !accNumber || !accName) return toast('Lengkapi semua data rekening!', 'error');
     try {
       await updateProfile({
         bankAccount: {
@@ -33,10 +92,10 @@ export default function Keuangan() {
           updatedAt: new Date().toISOString()
         }
       });
-      toast('Rekening bank berhasil disimpan!', 'success');
+      toast('Rekening berhasil dihubungkan!', 'success');
       setShowBankModal(false);
-    } catch (e) {
-      toast('Gagal menyimpan data bank.', 'error');
+    } catch {
+      toast('Gagal menyimpan data rekening.', 'error');
     }
   };
 
@@ -45,7 +104,7 @@ export default function Keuangan() {
       <Navbar role="freelancer" />
       <div className="dashboard-layout active">
         <Sidebar role="freelancer" activePath="/freelancer/keuangan" />
-        
+
         <main className="main-content">
           <div className="page-header">
             <h2>{i18n.t('finance_title')}</h2>
@@ -56,12 +115,12 @@ export default function Keuangan() {
             <div className="card" style={{ background: 'linear-gradient(135deg,rgba(0,212,170,0.15),rgba(0,212,170,0.05))', borderColor: 'rgba(0,212,170,0.3)' }}>
               <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)', marginBottom: '8px' }}>{i18n.t('balance_available')}</div>
               <div style={{ fontSize: '1.8rem', fontWeight: 800, color: 'var(--accent)' }}>{formatIDR(user?.balance?.available || 0)}</div>
-              <button 
-                className="btn btn-accent btn-sm" 
-                style={{ marginTop: '12px' }} 
-                onClick={() => hasBank ? setShowWithdrawModal(true) : setShowBankModal(true)}
+              <button
+                className="btn btn-accent btn-sm"
+                style={{ marginTop: '12px' }}
+                onClick={() => hasBank ? setShowWithdrawModal(true) : handleConnectRekening()}
               >
-                {hasBank ? i18n.t('btn_withdraw') : 'Atur Rekening'}
+                {hasBank ? i18n.t('btn_withdraw') : 'Atur Dana Anda'}
               </button>
             </div>
             <div className="card">
@@ -82,11 +141,13 @@ export default function Keuangan() {
               <div>
                 <h4 style={{ marginBottom: '4px' }}>Metode Penarikan</h4>
                 <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>
-                  {hasBank ? `${user.bankAccount.bankName} • ${user.bankAccount.accountNumber}` : 'Rekening bank belum diatur.'}
+                  {hasBank
+                    ? `${user.bankAccount.bankName} • ${user.bankAccount.accountNumber}`
+                    : 'Rekening bank belum diatur.'}
                 </p>
               </div>
-              <button className="btn btn-ghost btn-sm" onClick={() => setShowBankModal(true)}>
-                {hasBank ? 'Ubah' : 'Hubungkan Bank'}
+              <button className="btn btn-ghost btn-sm" onClick={() => hasBank ? setShowBankModal(true) : handleConnectRekening()}>
+                {hasBank ? 'Ubah' : 'Hubungkan Rekening'}
               </button>
             </div>
           </div>
@@ -145,29 +206,29 @@ export default function Keuangan() {
         </main>
       </div>
 
-      {/* Withdraw Modal Mock */}
+      {/* Withdraw Modal */}
       {showWithdrawModal && (
-        <div className="modal open">
-          <div className="modal-content">
+        <div className="modal-overlay open">
+          <div className="modal">
             <div className="modal-header">
               <h3>{i18n.t('btn_withdraw')}</h3>
-              <button className="btn-close" onClick={() => setShowWithdrawModal(false)}>×</button>
+              <button className="modal-close" onClick={() => setShowWithdrawModal(false)}>×</button>
             </div>
             <div className="modal-body">
               <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                 <div style={{ background: 'rgba(0,212,170,0.08)', borderRadius: '10px', padding: '14px', fontSize: '0.875rem' }}>
                   <span style={{ color: 'var(--text-muted)' }}>{i18n.t('balance_available')}</span>
-                  <span style={{ float: 'right', fontWeight: 700, color: 'var(--accent)' }}>{u.balance?.available}</span>
+                  <span style={{ float: 'right', fontWeight: 700, color: 'var(--accent)' }}>{formatIDR(user?.balance?.available || 0)}</span>
                 </div>
                 <div className="form-group">
                   <label className="form-label">{i18n.t('withdraw_method')}</label>
-                  <select className="form-select" value={user?.bankAccount?.bankName}>
+                  <select className="form-select" defaultValue={user?.bankAccount?.bankName}>
                     <option>{user?.bankAccount?.bankName} - {user?.bankAccount?.accountNumber}</option>
                   </select>
                 </div>
                 <div className="form-group">
                   <label className="form-label">Jumlah Penarikan (IDR)</label>
-                  <input className="form-input" type="number" defaultValue="4250000" />
+                  <input className="form-input" type="number" defaultValue="0" min="0" max={user?.balance?.available || 0} />
                 </div>
               </div>
             </div>
@@ -181,16 +242,148 @@ export default function Keuangan() {
         </div>
       )}
 
-      {/* Bank Setup Modal */}
-      {showBankModal && (
-        <div className="modal open">
-          <div className="modal-content">
+      {/* KYC Verification Modal */}
+      {showKycModal && (
+        <div className="modal-overlay open">
+          <div className="modal" style={{ maxWidth: '520px' }}>
             <div className="modal-header">
-              <h3>Pengaturan Rekening Bank</h3>
-              <button className="btn-close" onClick={() => setShowBankModal(false)}>×</button>
+              <h3>Verifikasi Identitas (KYC)</h3>
+              <button className="modal-close" onClick={() => setShowKycModal(false)}>×</button>
+            </div>
+            <div className="modal-body">
+
+              {/* Step indicator */}
+              <div style={{ display: 'flex', gap: '8px', marginBottom: '24px', alignItems: 'center' }}>
+                {['Unggah Dokumen', 'Proses OCR', 'Verifikasi OTP'].map((label, idx) => {
+                  const stepNum = idx + 1;
+                  const active = kycStep === stepNum;
+                  const done = kycStep > stepNum;
+                  return (
+                    <React.Fragment key={label}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flex: 1 }}>
+                        <div style={{
+                          width: 24, height: 24, borderRadius: '50%', fontSize: '0.75rem', fontWeight: 700,
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          background: done ? 'var(--accent)' : active ? 'var(--primary)' : 'var(--border)',
+                          color: (done || active) ? '#fff' : 'var(--text-muted)',
+                          flexShrink: 0
+                        }}>
+                          {done ? '✓' : stepNum}
+                        </div>
+                        <span style={{ fontSize: '0.78rem', color: active ? 'var(--text)' : 'var(--text-muted)', whiteSpace: 'nowrap' }}>{label}</span>
+                      </div>
+                      {idx < 2 && <div style={{ flex: 0, width: 24, height: 1, background: 'var(--border)' }} />}
+                    </React.Fragment>
+                  );
+                })}
+              </div>
+
+              {/* Country type toggle — shown on step 1 only */}
+              {kycStep === 1 && (
+                <>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '20px' }}>
+                    {[
+                      { type: 'id', flag: '🇮🇩', label: 'Indonesia (KTP)' },
+                      { type: 'intl', flag: '🌐', label: 'Internasional (Passport)' }
+                    ].map(opt => (
+                      <div
+                        key={opt.type}
+                        className="card"
+                        style={{
+                          cursor: 'pointer', textAlign: 'center', padding: '16px',
+                          borderColor: kycType === opt.type ? 'var(--primary)' : 'var(--border)',
+                          background: kycType === opt.type ? 'rgba(108,99,255,0.08)' : 'var(--card)'
+                        }}
+                        onClick={() => setKycType(opt.type)}
+                      >
+                        <div style={{ fontSize: '1.6rem', marginBottom: '6px' }}>{opt.flag}</div>
+                        <div style={{ fontWeight: 600, fontSize: '0.82rem' }}>{opt.label}</div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="form-group">
+                    <label className="form-label">{kycType === 'id' ? 'Upload Foto KTP' : 'Upload Passport'}</label>
+                    <input ref={fileRef} type="file" accept="image/*,.pdf" style={{ display: 'none' }} onChange={handleKycFileSelect} />
+                    <div className="upload-zone" onClick={() => fileRef.current?.click()} style={{ cursor: 'pointer' }}>
+                      <div className="upload-icon">📁</div>
+                      <div style={{ fontWeight: 600, marginBottom: '6px' }}>{ktpFileName || 'Klik untuk Pilih File'}</div>
+                      <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>Format: PNG, JPG atau PDF · Maks. 5MB</div>
+                    </div>
+                  </div>
+
+                  <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '12px' }}>
+                    🔒 Data identitas Anda diproses secara aman menggunakan Azure AI dan tidak disimpan secara permanen.
+                  </p>
+                </>
+              )}
+
+              {/* Step 2: OCR Processing */}
+              {kycStep === 2 && (
+                <div style={{ textAlign: 'center', padding: '40px 0' }}>
+                  <div style={{
+                    width: '44px', height: '44px', border: '3px solid var(--primary)',
+                    borderTopColor: 'transparent', borderRadius: '50%',
+                    animation: 'spin 0.8s linear infinite', margin: '0 auto 20px'
+                  }} />
+                  <h4>Memproses Dokumen...</h4>
+                  <p style={{ color: 'var(--text-muted)', marginTop: '8px', fontSize: '0.875rem' }}>
+                    Azure AI sedang menganalisis dan memvalidasi dokumen Anda.
+                  </p>
+                </div>
+              )}
+
+              {/* Step 3: OTP Verification */}
+              {kycStep === 3 && (
+                <>
+                  <div style={{ textAlign: 'center', marginBottom: '20px' }}>
+                    <div style={{ fontSize: '2rem', marginBottom: '8px' }}>📱</div>
+                    <h4>Verifikasi OTP</h4>
+                    <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)', marginTop: '6px' }}>
+                      Kode OTP 6 digit telah dikirimkan ke nomor HP yang terdaftar pada identitas Anda.
+                    </p>
+                  </div>
+                  <div style={{ display: 'flex', gap: '8px', justifyContent: 'center', margin: '16px 0 24px' }}>
+                    {kycOtp.map((digit, i) => (
+                      <input
+                        key={i}
+                        id={`kyc-otp-${i}`}
+                        className="form-input"
+                        style={{ width: '44px', textAlign: 'center', fontSize: '1.2rem', padding: '8px 0' }}
+                        maxLength="1"
+                        value={digit}
+                        onChange={(e) => updateKycOtpDigit(i, e.target.value)}
+                      />
+                    ))}
+                  </div>
+                  <button className="btn btn-primary w-full" onClick={handleKycVerify}>
+                    Verifikasi &amp; Lanjutkan
+                  </button>
+                  <button className="btn btn-ghost w-full" style={{ marginTop: '8px' }}>
+                    Kirim Ulang OTP
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Bank / Rekening Setup Modal */}
+      {showBankModal && (
+        <div className="modal-overlay open">
+          <div className="modal">
+            <div className="modal-header">
+              <h3>{hasBank ? 'Ubah Rekening' : 'Hubungkan Rekening'}</h3>
+              <button className="modal-close" onClick={() => setShowBankModal(false)}>×</button>
             </div>
             <div className="modal-body">
               <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                {isKycVerified && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(0,212,170,0.08)', borderRadius: '8px', padding: '10px 14px', fontSize: '0.82rem', color: 'var(--accent)' }}>
+                    ✓ Identitas Anda telah terverifikasi
+                  </div>
+                )}
                 <div className="form-group">
                   <label className="form-label">Nama Bank</label>
                   <select className="form-select" value={bankName} onChange={(e) => setBankName(e.target.value)}>
@@ -221,3 +414,4 @@ export default function Keuangan() {
     </div>
   );
 }
+
