@@ -70,6 +70,11 @@ const i18n = {
       no_account: 'Belum punya akun?',
       signup_link: 'Daftar Gratis',
       forgot_pass: 'Lupa kata sandi?',
+      reset_sending: 'Mengirim...',
+      reset_enter_email: 'Masukkan email Anda terlebih dahulu.',
+      reset_email_sent: 'Link reset kata sandi telah dikirim ke email Anda.',
+      reset_invalid_email: 'Format email tidak valid.',
+      reset_email_failed: 'Gagal mengirim email reset kata sandi.',
       or: 'atau',
 
       // KYC
@@ -329,6 +334,11 @@ const i18n = {
       no_account: 'Don\'t have an account?',
       signup_link: 'Sign Up Free',
       forgot_pass: 'Forgot password?',
+      reset_sending: 'Sending...',
+      reset_enter_email: 'Enter your email first.',
+      reset_email_sent: 'Password reset link has been sent to your email.',
+      reset_invalid_email: 'Invalid email format.',
+      reset_email_failed: 'Failed to send password reset email.',
       or: 'or',
 
       // KYC

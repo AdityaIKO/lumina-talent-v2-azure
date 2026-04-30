@@ -7,6 +7,12 @@ import { useAuth } from '../../context/AuthContext';
 
 const i18n = window.i18n || { t: k => k };
 
+function normalizeExternalUrl(url) {
+  const trimmed = (url || '').trim();
+  if (!trimmed) return '';
+  return /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+}
+
 export default function Profil() {
   const nav = useAppNavigate();
   const { user, updateProfile } = useAuth();
@@ -40,11 +46,12 @@ export default function Profil() {
 
   const handleFinish = async () => {
     try {
+      const normalizedGithubUrl = normalizeExternalUrl(githubUrl);
       const updatedData = {
         name: fullName,
         bio: bio,
         skills: skills,
-        githubUrl: githubUrl,
+        githubUrl: normalizedGithubUrl,
         aiSummary: aiSummary,
         cvFileName: cvFileName,
         profileCompleted: 100,
@@ -52,6 +59,7 @@ export default function Profil() {
       };
       
       await updateProfile(updatedData);
+      setGithubUrl(normalizedGithubUrl);
       toast('Profil Berhasil Disimpan!', 'success');
       setIsEditing(false);
       nav.toFreelancerHome();
@@ -86,20 +94,11 @@ export default function Profil() {
     setCvFileName(file.name);
     setLoadingCV(true);
     
-    // Simulate AI extraction (Azure Document Intelligence)
+    // Placeholder for future CV analysis. Do not mutate user-entered skills.
     setTimeout(() => {
       setLoadingCV(false);
       setCvResult(true);
-      
-      // AI EXTRACTION (Hanya menambah skill & mengisi AI Insights, TIDAK mengubah Bio)
-      const extractedSkills = ['React', 'Node.js', 'Python', 'Cloud Computing'];
-      
-      setSkills(prev => Array.from(new Set([...prev, ...extractedSkills]))); // Tetap tambah skill otomatis
-      
-      const summary = "Kandidat menunjukkan penguasaan teknis yang kuat di ekosistem modern. Memiliki rekam jejak dalam membangun arsitektur yang efisien dan scalable. Sangat direkomendasikan untuk proyek yang membutuhkan solusi teknis tingkat tinggi.";
-      setAiSummary(summary);
-      
-      toast(`AI berhasil menganalisis "${file.name}"! Skill baru telah ditambahkan.`, 'success');
+      toast(`CV "${file.name}" berhasil diunggah.`, 'success');
     }, 1800);
   };
 
@@ -161,9 +160,18 @@ export default function Profil() {
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                       <span style={{ fontSize: '1.2rem' }}>🐱</span>
-                      <a href={user?.githubUrl} target="_blank" rel="noreferrer" style={{ color: 'var(--primary-light)', textDecoration: 'none', fontSize: '0.9rem' }}>
-                        {user?.githubUrl || 'GitHub belum terhubung'}
-                      </a>
+                      {user?.githubUrl ? (
+                        <a
+                          href={normalizeExternalUrl(user.githubUrl)}
+                          target="_blank"
+                          rel="noreferrer"
+                          style={{ color: 'var(--primary-light)', textDecoration: 'none', fontSize: '0.9rem' }}
+                        >
+                          {user.githubUrl}
+                        </a>
+                      ) : (
+                        <span style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>GitHub belum terhubung</span>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -257,17 +265,17 @@ export default function Profil() {
                 <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginTop: '8px' }}>
                   {cvFileName
                     ? 'Klik untuk mengganti file CV.'
-                    : 'Format: PDF atau DOC · Maks. 5MB. AI akan mengekstrak pengalaman & keahlian Anda.'}
+                    : 'Format: PDF atau DOC · Maks. 5MB.'}
                 </p>
               </div>
               {loadingCV && (
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'center', marginTop: '16px', color: 'var(--primary-light)' }}>
                   <div style={{ width: '14px', height: '14px', border: '2px solid var(--primary)', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }}></div>
-                  <span>AI sedang menganalisis CV Anda...</span>
+                  <span>Mengunggah CV Anda...</span>
                 </div>
               )}
               {cvResult && !loadingCV && (
-                <div style={{ marginTop: '16px', color: 'var(--accent)', fontWeight: 600 }}>✅ CV Berhasil dianalisis oleh AI.</div>
+                <div style={{ marginTop: '16px', color: 'var(--accent)', fontWeight: 600 }}>✅ CV berhasil diunggah.</div>
               )}
             </div>
           )}

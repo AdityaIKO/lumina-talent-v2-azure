@@ -4,7 +4,7 @@ import useAppNavigate from '../../hooks/useAppNavigate';
 import { useAuth } from '../../context/AuthContext';
 import { toast } from '../../components/uiHelpers';
 import { auth } from '../../services/firebase';
-import { signInWithEmailAndPassword, signOut } from 'firebase/auth';
+import { sendPasswordResetEmail, signInWithEmailAndPassword, signOut } from 'firebase/auth';
 
 const i18n = window.i18n || { t: k => k };
 
@@ -14,6 +14,7 @@ export default function Login() {
   const [email, setEmail] = useState('rizki@email.com');
   const [password, setPassword] = useState('password123');
   const [loading, setLoading] = useState(false);
+  const [resetLoading, setResetLoading] = useState(false);
 
   // Cek apakah baru saja daftar dan butuh verifikasi
   const showVerifyBanner = nav.location.state?.info === 'VERIFY_EMAIL_SENT';
@@ -67,6 +68,30 @@ export default function Login() {
     setTimeout(() => handleLogin(), 100);
   }
 
+  async function handleForgotPassword(e) {
+    e.preventDefault();
+    const trimmedEmail = email.trim();
+
+    if (!trimmedEmail) {
+      toast(i18n.t('reset_enter_email'), 'warning');
+      return;
+    }
+
+    setResetLoading(true);
+    try {
+      await sendPasswordResetEmail(auth, trimmedEmail);
+      toast(i18n.t('reset_email_sent'), 'success');
+    } catch (error) {
+      console.error('Password Reset Error:', error);
+      const message = error.code === 'auth/invalid-email'
+        ? i18n.t('reset_invalid_email')
+        : i18n.t('reset_email_failed');
+      toast(message, 'error');
+    } finally {
+      setResetLoading(false);
+    }
+  }
+
   return (
     <div style={{ minHeight:'100vh',paddingTop:68 }}>
       <Navbar role={null} />
@@ -113,7 +138,23 @@ export default function Login() {
             <div className="form-group">
               <label className="form-label" style={{ display:'flex',justifyContent:'space-between' }}>
                 <span>{i18n.t('label_password')}</span>
-                <a style={{ fontSize:'0.8rem',cursor:'pointer',color:'var(--primary-light)' }}>{i18n.t('forgot_pass')}</a>
+                <button
+                  type="button"
+                  onClick={handleForgotPassword}
+                  disabled={resetLoading}
+                  style={{
+                    appearance: 'none',
+                    border: 0,
+                    background: 'transparent',
+                    padding: 0,
+                    fontSize: '0.8rem',
+                    cursor: resetLoading ? 'wait' : 'pointer',
+                    color: 'var(--primary-light)',
+                    opacity: resetLoading ? 0.7 : 1
+                  }}
+                >
+                  {resetLoading ? i18n.t('reset_sending') : i18n.t('forgot_pass')}
+                </button>
               </label>
               <input 
                 className="form-input" 
