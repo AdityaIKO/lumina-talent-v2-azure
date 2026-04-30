@@ -1,0 +1,26 @@
+{
+  "globalRedirects": {},
+  "navigationFallback": {
+    "rewrite": "index.html",
+    "exclude": [
+      "/assets/*",
+      "/*.json",
+      "/*.js",
+      "/*.css",
+      "/*.svg",
+      "/*.png",
+      "/*.jpg",
+      "/*.ico"
+    ]
+  },
+  "mimeTypes": {},
+  "responseHeaders": {},
+  "routes": [
+    {
+      "route": "/assets/*",
+      "headers": {
+        "cache-control": "public, max-age=31536000"
+      }
+    }
+  ]
+}
