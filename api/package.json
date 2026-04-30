@@ -1,0 +1,16 @@
+{
+  "name": "lumina-api",
+  "version": "1.0.0",
+  "description": "Lumina Talent Azure Functions Backend",
+  "main": "index.js",
+  "scripts": {
+    "start": "func start",
+    "test": "echo \"No tests yet\""
+  },
+  "dependencies": {
+    "mongodb": "^6.3.0"
+  },
+  "devDependencies": {
+    "@azure/functions": "^4.0.0"
+  }
+}
